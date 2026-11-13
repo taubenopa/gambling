@@ -1,0 +1,75 @@
+<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Multiplayer Casino</title>
+<style>
+:root{--bg:#0e1a14;--card:#16281f;--gold:#f5c542;--txt:#f2efe6;--red:#c0392b}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--txt)}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#0a120e;position:sticky;top:0}
+h1{font-size:18px;margin:0;color:var(--gold)}#bal{font-weight:700;color:var(--gold);font-size:18px}
+nav{display:flex;gap:6px;padding:10px;overflow-x:auto}nav button{flex:none}
+button{background:var(--card);color:var(--txt);border:1px solid #2c4a3a;padding:10px 14px;border-radius:8px;font-size:15px;cursor:pointer}
+button.on,button.go{background:var(--gold);color:#222;border-color:var(--gold);font-weight:700}
+main{display:grid;gap:12px;padding:10px;max-width:1000px;margin:auto;grid-template-columns:2fr 1fr}
+@media(max-width:760px){main{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:12px;padding:14px}.tab{display:none}.tab.on{display:block}
+input{background:#0a120e;color:var(--txt);border:1px solid #2c4a3a;padding:9px;border-radius:8px;font-size:15px;width:90px}
+.reels{display:flex;gap:10px;justify-content:center;font-size:56px;margin:14px 0}.reels span{background:#0a120e;border-radius:10px;padding:6px 14px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.cell{background:#777;border-radius:10px;height:64px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;cursor:pointer;user-select:none}
+.cell.rev{background:#fff;color:#222;cursor:default}
+.cards{font-size:28px;letter-spacing:2px;margin:6px 0}.msg{min-height:24px;margin:8px 0;color:var(--gold);font-weight:600}
+.nums{display:grid;grid-template-columns:repeat(13,1fr);gap:3px;margin:8px 0}.nums button{padding:6px 0;font-size:12px}
+.r{background:var(--red)!important}.b{background:#111!important}.g{background:#1e8449!important}
+#log{height:150px;overflow:auto;font-size:13px;background:#0a120e;border-radius:8px;padding:8px;margin-bottom:6px}
+#login{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;z-index:9}
+#login input{width:220px}.hist span{display:inline-block;margin:2px;padding:3px 8px;border-radius:6px;font-size:13px}
+</style></head><body>
+<div id="login"><h1 style="font-size:30px">🎰 Multiplayer Casino</h1><p>Nur Spielgeld – kein echtes Gambling.</p><input id="name" placeholder="Dein Name" maxlength="16"><button class="go" id="join">Los geht's (1000 💰)</button></div>
+<header><h1>🎰 Casino</h1><div><span id="me"></span> 💰 <span id="bal">0</span></div></header>
+<nav id="nav"><button data-t="slots" class="on">🎰 Automat</button><button data-t="scratch">🎟️ Rubbellos</button><button data-t="bj">🃏 Blackjack</button><button data-t="roul">🎡 Roulette (live)</button></nav>
+<main><div>
+<section class="card tab on" id="slots"><h3>Spielautomat</h3><div class="reels"><span>🍒</span><span>🍋</span><span>🔔</span></div>
+Einsatz <input type="number" id="sb" value="10" min="1"> <button class="go" id="spinb">Drehen</button>
+<div class="msg" id="sm"></div><small>2 gleiche = Einsatz zurück · 3 gleiche = x5 bis x50</small></section>
+<section class="card tab" id="scratch"><h3>Rubbellos (10 💰)</h3><p>Klicke die Felder frei. 3 gleiche Beträge = Gewinn!</p><button class="go" id="buys">Los kaufen</button>
+<div class="grid" id="sg"></div><div class="msg" id="scm"></div></section>
+<section class="card tab" id="bj"><h3>Blackjack</h3>Einsatz <input type="number" id="bb" value="20" min="1"> <button class="go" id="bjs">Austeilen</button>
+<button id="hit">Karte</button><button id="stand">Halten</button>
+<p>Dealer <b id="dv"></b></p><div class="cards" id="dc">–</div><p>Du <b id="pv"></b></p><div class="cards" id="pc">–</div><div class="msg" id="bjm"></div></section>
+<section class="card tab" id="roul"><h3>Roulette – gemeinsamer Tisch</h3><p>Nächste Drehung in <b id="cd">–</b>s · <span id="rp">0</span> Spieler mit Einsatz</p>
+Chip <input type="number" id="rb" value="10" min="1"> <div style="margin:8px 0"><button data-k="red" class="r">Rot</button> <button data-k="black" class="b">Schwarz</button> <button data-k="even">Gerade</button> <button data-k="odd">Ungerade</button> <button data-k="low">1–18</button> <button data-k="high">19–36</button></div>
+<div class="nums" id="nums"></div><div class="msg" id="rm"></div><div class="hist" id="hist"></div></section>
+<p style="text-align:center"><button id="rebuy">Pleite? +500 💰</button></p></div>
+<aside><div class="card"><h3>🏆 Rangliste <small id="on"></small></h3><ol id="top" style="padding-left:20px;margin:0"></ol></div>
+<div class="card" style="margin-top:12px"><h3>💬 Chat</h3><div id="log"></div><input id="ci" style="width:100%" placeholder="Nachricht + Enter"></div></aside></main>
+<script>
+const $=s=>document.querySelector(s),RED=[1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];let ws,next=0;
+const send=o=>ws&&ws.readyState===1&&ws.send(JSON.stringify(o));const amt=id=>Math.floor($(id).value)||0;
+$('#name').value=localStorage.cname||'';
+$('#join').onclick=()=>{const name=$('#name').value.trim()||'Gast';localStorage.cname=name;connect(name)};
+function connect(name){ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host);
+ ws.onopen=()=>send({t:'join',name,token:localStorage.ctoken});ws.onclose=()=>{$('#me').textContent='⚠️ getrennt – ';setTimeout(()=>connect(name),2000)};ws.onmessage=e=>on(JSON.parse(e.data))}
+function on(d){switch(d.t){
+ case'you':localStorage.ctoken=d.token;$('#me').textContent=d.name;$('#login').style.display='none';break;
+ case'bal':$('#bal').textContent=d.v;break;
+ case'lb':$('#on').textContent='('+d.online+' online)';$('#top').innerHTML=d.top.map(p=>`<li>${p.n} – ${p.b}</li>`).join('');break;
+ case'chat':$('#log').innerHTML+=`<div><b>${d.n}:</b> ${d.m}</div>`;$('#log').scrollTop=1e9;break;
+ case'slot':spinAnim(d);break;
+ case'scratch':$('#sg').innerHTML=d.cells.map(c=>`<div class="cell" data-v="${c}">?</div>`).join('');$('#sg').dataset.win=d.win;$('#scm').textContent='';break;
+ case'bj':$('#pc').textContent=d.p.join(' ');$('#dc').textContent=d.d.map(c=>c==='??'?'🂠':c).join(' ');$('#pv').textContent=d.pv;$('#dv').textContent=d.dv??'';$('#bjm').textContent=d.msg;break;
+ case'rstate':next=d.next;$('#rp').textContent=d.players;$('#hist').innerHTML=d.hist.map(n=>`<span class="${n?RED.includes(n)?'r':'b':'g'}">${n}</span>`).join('');break;
+ case'rbetok':$('#rm').textContent=`Einsatz ${d.amt} auf ${d.k==='num'?d.v:d.k} platziert`;break;
+ case'rspin':$('#rm').textContent='🎡 Kugel fällt auf '+d.n+'!';break;
+ case'rres':$('#rm').textContent+=d.net===undefined?'':d.net>0?` – du gewinnst ${d.net}! 🎉`:d.net<0?` – du verlierst ${-d.net}`:'';break}}
+function spinAnim(d){const sp=[...document.querySelectorAll('.reels span')],S=['🍒','🍋','🔔','⭐','7️⃣','💎'];let i=0;$('#sm').textContent='';
+ const t=setInterval(()=>{sp.forEach((s,k)=>{if(i<8+k*6)s.textContent=S[Math.random()*6|0]});if(++i>26){clearInterval(t);sp.forEach((s,k)=>s.textContent=d.reels[k]);
+  $('#sm').textContent=d.win>d.bet?`🎉 Gewinn: ${d.win}!`:d.win===d.bet?'Einsatz zurück':'Leider nichts'}},70)}
+$('#spinb').onclick=()=>send({t:'slot',amt:amt('#sb')});
+$('#buys').onclick=()=>send({t:'scratch'});
+$('#sg').onclick=e=>{const c=e.target.closest('.cell');if(!c||c.classList.contains('rev'))return;c.textContent=c.dataset.v;c.classList.add('rev');
+ const g=[...document.querySelectorAll('#sg .cell')];if(g.every(x=>x.classList.contains('rev')))$('#scm').textContent=+$('#sg').dataset.win?`🎉 Gewonnen: ${$('#sg').dataset.win}!`:'Leider eine Niete'};
+$('#bjs').onclick=()=>send({t:'bjstart',amt:amt('#bb')});$('#hit').onclick=()=>send({t:'bjhit'});$('#stand').onclick=()=>send({t:'bjstand'});
+$('#nums').innerHTML=Array.from({length:37},(_,n)=>`<button data-n="${n}" class="${n?RED.includes(n)?'r':'b':'g'}">${n}</button>`).join('');
+$('#roul').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.k)send({t:'rbet',k:b.dataset.k,amt:amt('#rb')});if(b.dataset.n)send({t:'rbet',k:'num',v:+b.dataset.n,amt:amt('#rb')})};
+setInterval(()=>$('#cd').textContent=Math.max(0,Math.round((next-Date.now())/1000)),500);
+$('#nav').onclick=e=>{const t=e.target.dataset.t;if(!t)return;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b===e.target));document.querySelectorAll('.tab').forEach(s=>s.classList.toggle('on',s.id===t))};
+$('#rebuy').onclick=()=>send({t:'rebuy'});$('#ci').onkeydown=e=>{if(e.key==='Enter'&&e.target.value.trim()){send({t:'chat',m:e.target.value});e.target.value=''}};
+</script></body></html>
